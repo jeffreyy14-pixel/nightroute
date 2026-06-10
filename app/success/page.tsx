@@ -1,9 +1,10 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function Success() {
+function SuccessContent() {
   const router = useRouter()
   const params = useSearchParams()
 
@@ -21,5 +22,13 @@ export default function Success() {
       <h1 style={{ fontSize: 28, fontWeight: 900, margin: '0 0 12px' }}>Paiement réussi !</h1>
       <p style={{ color: '#9CA3AF', fontSize: 16 }}>Redirection en cours...</p>
     </div>
+  )
+}
+
+export default function Success() {
+  return (
+    <Suspense>
+      <SuccessContent />
+    </Suspense>
   )
 }
