@@ -46,15 +46,17 @@ const VIBES = [
   { id: 'chill', emoji: '🍻', label: 'Chill' },
   { id: 'date', emoji: '🕯️', label: 'Date' },
   { id: 'social', emoji: '👋', label: 'Social' },
+  { id: 'festif', emoji: '🎊', label: 'Festif' },
+  { id: 'relax', emoji: '😌', label: 'Relax' },
 ]
 
 const BUDGETS = ['20', '50', '100', 'unlimited']
 
 const FORFAITS = [
-  { id: 'soiree', label: 'Une soirée', price: '0,99$', credits: 1, emoji: '🌙' },
-  { id: 'weekend', label: 'Un weekend', price: '1,99$', credits: 3, emoji: '🎉' },
-  { id: 'semaine', label: 'Une semaine', price: '3,99$', credits: 7, emoji: '🔥' },
-  { id: 'mois', label: 'Un mois', price: '7,99$', credits: 30, emoji: '👑' },
+  { id: 'soiree', label: 'Une soirée', price: '0,99$', cents: 99, credits: 1, emoji: '🌙', desc: '1 plan complet' },
+  { id: 'weekend', label: 'Un weekend', price: '1,99$', cents: 199, credits: 3, emoji: '🎉', desc: '3 plans' },
+  { id: 'semaine', label: 'Une semaine', price: '3,99$', cents: 399, credits: 7, emoji: '🔥', desc: '7 plans' },
+  { id: 'mois', label: 'Un mois', price: '7,99$', cents: 799, credits: 30, emoji: '👑', desc: '30 plans' },
 ]
 
 export default function NightRoute() {
@@ -71,14 +73,15 @@ export default function NightRoute() {
       @keyframes spin { to { transform: rotate(360deg); } }
       @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       * { box-sizing: border-box; }
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: #09090B; }
+      ::-webkit-scrollbar-thumb { background: #2A2A2E; border-radius: 3px; }
     `
     document.head.appendChild(style)
 
-    // Récupérer les crédits depuis localStorage
     const saved = localStorage.getItem('nightroute_credits')
     if (saved) setCredits(parseInt(saved))
 
-    // Vérifier si retour de Stripe
     const params = new URLSearchParams(window.location.search)
     const sessionId = params.get('session_id')
     const newCredits = params.get('credits')
@@ -124,10 +127,6 @@ export default function NightRoute() {
   }
 
   async function generatePlan() {
-    if (credits <= 0) {
-      setScreen('paywall')
-      return
-    }
     setScreen('loading')
     try {
       const response = await fetch('/api/generate', {
@@ -138,10 +137,6 @@ export default function NightRoute() {
       const data = await response.json()
       const parsed = JSON.parse(data.result)
       setPlan(parsed)
-      // Déduire 1 crédit
-      const newCredits = credits - 1
-      setCredits(newCredits)
-      localStorage.setItem('nightroute_credits', newCredits.toString())
       setScreen('result')
     } catch (error) {
       console.error(error)
@@ -180,48 +175,10 @@ export default function NightRoute() {
             </div>
           )}
 
-          <button style={styles.ctaPrimary} onClick={() => credits > 0 ? setScreen('form') : setScreen('paywall')}>
-            {credits > 0 ? 'Planifier ma soirée →' : 'Commencer — 0,99$'}
+          <button style={styles.ctaPrimary} onClick={() => setScreen('form')}>
+            Planifier ma soirée →
           </button>
-          <p style={styles.priceHint}>Aperçu gratuit • Plans à partir de 0,99$</p>
-        </div>
-      </div>
-    )
-  }
-
-  // ─── PAYWALL ───────────────────────────────────────────────
-  if (screen === 'paywall') {
-    return (
-      <div style={styles.root}>
-        <div style={styles.glow1} />
-        <div style={styles.formWrap}>
-          <button style={styles.backBtn} onClick={() => setScreen('landing')}>← Retour</button>
-          <h2 style={styles.sectionTitle}>Choisis ton forfait</h2>
-          <p style={{ color: '#9CA3AF', fontSize: 14, marginBottom: 28, marginTop: -16 }}>
-            Débloque des plans de soirée complets générés par IA
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
-            {FORFAITS.map((f) => (
-              <button key={f.id} onClick={() => setSelectedForfait(f.id)}
-                style={{ ...styles.forfaitBtn, ...(selectedForfait === f.id ? styles.forfaitBtnActive : {}) }}>
-                <span style={{ fontSize: 24 }}>{f.emoji}</span>
-                <div style={{ flex: 1, textAlign: 'left' }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#F9FAFB' }}>{f.label}</div>
-                  <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{f.credits} plan{f.credits > 1 ? 's' : ''} de soirée</div>
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: selectedForfait === f.id ? '#7C3AED' : '#F9FAFB' }}>
-                  {f.price}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <button style={{ ...styles.ctaPrimary, opacity: loadingCheckout ? 0.6 : 1 }}
-            onClick={handleCheckout} disabled={loadingCheckout}>
-            {loadingCheckout ? 'Redirection...' : `Payer ${FORFAITS.find(f => f.id === selectedForfait)?.price} →`}
-          </button>
-          <p style={styles.priceHint}>Paiement sécurisé par Stripe 🔒</p>
+          <p style={styles.priceHint}>1er arrêt gratuit • Plan complet à partir de 0,99$</p>
         </div>
       </div>
     )
@@ -237,9 +194,12 @@ export default function NightRoute() {
           <button style={styles.backBtn} onClick={() => setScreen('landing')}>← Retour</button>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
             <h2 style={{ ...styles.sectionTitle, margin: 0 }}>Configure ta soirée</h2>
-            <div style={styles.creditsChip}>🌙 {credits} crédit{credits > 1 ? 's' : ''}</div>
+            {credits > 0 && (
+              <div style={styles.creditsChip}>🌙 {credits} crédit{credits > 1 ? 's' : ''}</div>
+            )}
           </div>
 
+          {/* VILLE */}
           <div style={styles.fieldGroup}>
             <label style={styles.label}>📍 Ville</label>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -252,19 +212,21 @@ export default function NightRoute() {
             </div>
           </div>
 
+          {/* VIBE */}
           <div style={styles.fieldGroup}>
             <label style={styles.label}>🎭 Vibe</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               {VIBES.map((v) => (
                 <button key={v.id} onClick={() => setForm({ ...form, vibe: v.label })}
                   style={{ ...styles.vibeBtn, ...(form.vibe === v.label ? styles.vibeBtnActive : {}) }}>
-                  <span style={{ fontSize: 24 }}>{v.emoji}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label}</span>
+                  <span style={{ fontSize: 22 }}>{v.emoji}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>{v.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
+          {/* BUDGET */}
           <div style={styles.fieldGroup}>
             <label style={styles.label}>💸 Budget / personne</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
@@ -278,6 +240,7 @@ export default function NightRoute() {
             </div>
           </div>
 
+          {/* PERSONNES */}
           <div style={styles.fieldGroup}>
             <label style={styles.label}>👥 Nombre de personnes</label>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -290,10 +253,12 @@ export default function NightRoute() {
             </div>
           </div>
 
-          <button style={{ ...styles.ctaPrimary, opacity: canGenerate ? 1 : 0.4, cursor: canGenerate ? 'pointer' : 'not-allowed' }}
+          <button
+            style={{ ...styles.ctaPrimary, opacity: canGenerate ? 1 : 0.4, cursor: canGenerate ? 'pointer' : 'not-allowed' }}
             onClick={canGenerate ? generatePlan : undefined}>
             Générer mon plan 🚀
           </button>
+          <p style={styles.priceHint}>1er arrêt gratuit — plan complet à partir de 0,99$</p>
         </div>
       </div>
     )
@@ -313,13 +278,56 @@ export default function NightRoute() {
     )
   }
 
+  // ─── PAYWALL ───────────────────────────────────────────────
+  if (screen === 'paywall') {
+    return (
+      <div style={styles.root}>
+        <div style={styles.glow1} />
+        <div style={styles.formWrap}>
+          <button style={styles.backBtn} onClick={() => setScreen('result')}>← Retour</button>
+          <h2 style={styles.sectionTitle}>Débloque ta soirée 🔓</h2>
+          <p style={{ color: '#9CA3AF', fontSize: 14, marginBottom: 28, marginTop: -16 }}>
+            Choisis un forfait pour voir tous les arrêts
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
+            {FORFAITS.map((f) => (
+              <button key={f.id} onClick={() => setSelectedForfait(f.id)}
+                style={{ ...styles.forfaitBtn, ...(selectedForfait === f.id ? styles.forfaitBtnActive : {}) }}>
+                <span style={{ fontSize: 26 }}>{f.emoji}</span>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#F9FAFB' }}>{f.label}</div>
+                  <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{f.desc}</div>
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: selectedForfait === f.id ? '#7C3AED' : '#F9FAFB' }}>
+                  {f.price}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <button style={{ ...styles.ctaPrimary, opacity: loadingCheckout ? 0.6 : 1 }}
+            onClick={handleCheckout} disabled={loadingCheckout}>
+            {loadingCheckout ? 'Redirection...' : `Payer ${FORFAITS.find(f => f.id === selectedForfait)?.price} →`}
+          </button>
+          <p style={styles.priceHint}>Paiement sécurisé par Stripe 🔒</p>
+        </div>
+      </div>
+    )
+  }
+
   // ─── RESULT ────────────────────────────────────────────────
   if (screen === 'result' && plan) {
+    const freeStop = plan.stops?.[0]
+    const lockedStops = plan.stops?.slice(1) ?? []
+
     return (
       <div style={styles.root}>
         <div style={styles.glow1} />
         <div style={styles.glow2} />
         <div style={styles.resultWrap}>
+
+          {/* HEADER */}
           <div style={styles.resultHeader}>
             <div style={styles.logoMark}>🌙</div>
             <div style={styles.vibeBadge}>{plan.vibe}</div>
@@ -332,11 +340,41 @@ export default function NightRoute() {
             </div>
           </div>
 
-          {plan.stops?.map((stop) => (
-            <StopCard key={stop.order} stop={stop} />
-          ))}
+          {/* FREE STOP */}
+          {freeStop && <StopCard stop={freeStop} />}
 
-          {plan.night_tips?.length > 0 && (
+          {/* LOCKED STOPS */}
+          {lockedStops.length > 0 && (
+            credits > 0 ? (
+              lockedStops.map((stop) => <StopCard key={stop.order} stop={stop} />)
+            ) : (
+              <div style={styles.paywallCard}>
+                <div style={styles.paywallBlur}>
+                  {lockedStops.map((stop) => (
+                    <div key={stop.order} style={styles.blurredStop}>
+                      <div style={styles.blurredBadge}>{stop.order}</div>
+                      <div>
+                        <div style={styles.blurredName}>{stop.name}</div>
+                        <div style={styles.blurredType}>{stop.type} · {stop.arrival_time}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={styles.paywallOverlay}>
+                  <div style={styles.paywallLock}>🔒</div>
+                  <h3 style={styles.paywallTitle}>{lockedStops.length} autres arrêts cachés</h3>
+                  <p style={styles.paywallSub}>Débloque le plan complet pour voir tous les spots, avis et tips exclusifs.</p>
+                  <button style={styles.paywallBtn} onClick={() => setScreen('paywall')}>
+                    Voir les forfaits ✨
+                  </button>
+                  <p style={{ fontSize: 11, color: '#4B5563', marginTop: 8 }}>À partir de 0,99$ seulement</p>
+                </div>
+              </div>
+            )
+          )}
+
+          {/* TIPS - visible seulement si payé */}
+          {credits > 0 && plan.night_tips?.length > 0 && (
             <div style={styles.tipsCard}>
               <h3 style={styles.tipsTitle}>💡 Conseils de la nuit</h3>
               {plan.night_tips.map((tip, i) => (
@@ -355,7 +393,7 @@ export default function NightRoute() {
             {credits <= 0 && (
               <button style={{ ...styles.restartBtn, borderColor: '#7C3AED', color: '#7C3AED' }}
                 onClick={() => setScreen('paywall')}>
-                + Acheter des crédits
+                🔓 Débloquer
               </button>
             )}
           </div>
@@ -367,6 +405,7 @@ export default function NightRoute() {
   return null
 }
 
+// ─── STOP CARD ─────────────────────────────────────────────
 function StopCard({ stop }: { stop: Stop }) {
   const stars = (n: number) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n))
   return (
@@ -426,13 +465,9 @@ function StopCard({ stop }: { stop: Stop }) {
   )
 }
 
+// ─── STYLES ────────────────────────────────────────────────
 const styles: Record<string, CSSProperties> = {
-  root: {
-    minHeight: '100vh', background: '#09090B',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    color: '#F9FAFB', display: 'flex', flexDirection: 'column', alignItems: 'center',
-    padding: '0 0 60px 0', position: 'relative', overflowX: 'hidden',
-  },
+  root: { minHeight: '100vh', background: '#09090B', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: '#F9FAFB', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0 60px 0', position: 'relative', overflowX: 'hidden' },
   glow1: { position: 'fixed', top: 0, left: '10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 },
   glow2: { position: 'fixed', top: 200, right: '0%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,77,109,0.08) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 },
   landingWrap: { width: '100%', maxWidth: 440, padding: '70px 20px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 },
@@ -453,7 +488,7 @@ const styles: Record<string, CSSProperties> = {
   label: { display: 'block', color: '#9CA3AF', fontSize: 13, fontWeight: 700, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' },
   optBtn: { flex: 1, padding: '12px 16px', background: '#111113', border: '1.5px solid #2A2A2E', borderRadius: 12, color: '#9CA3AF', fontWeight: 600, fontSize: 14, cursor: 'pointer' },
   optBtnActive: { border: '1.5px solid #7C3AED', background: 'rgba(124,58,237,0.15)', color: '#fff' },
-  vibeBtn: { padding: '18px 12px', background: '#111113', border: '1.5px solid #2A2A2E', borderRadius: 14, color: '#9CA3AF', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 },
+  vibeBtn: { padding: '16px 8px', background: '#111113', border: '1.5px solid #2A2A2E', borderRadius: 14, color: '#9CA3AF', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 },
   vibeBtnActive: { border: '1.5px solid #FF4D6D', background: 'rgba(255,77,109,0.12)', color: '#fff' },
   budgetBtn: { padding: '14px 8px', background: '#111113', border: '1.5px solid #2A2A2E', borderRadius: 12, color: '#9CA3AF', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 },
   budgetBtnActive: { border: '1.5px solid #F59E0B', background: 'rgba(245,158,11,0.13)', color: '#fff' },
@@ -470,6 +505,17 @@ const styles: Record<string, CSSProperties> = {
   vibeBadge: { display: 'inline-block', background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', borderRadius: 20, padding: '4px 14px', fontSize: 13, fontWeight: 700, color: '#FF4D6D' },
   metaRow: { display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' },
   metaChip: { background: '#111113', border: '1px solid #2A2A2E', borderRadius: 20, padding: '6px 14px', fontSize: 13, color: '#9CA3AF' },
+  paywallCard: { position: 'relative', borderRadius: 20, overflow: 'hidden', border: '1px solid #2A2A2E' },
+  paywallBlur: { filter: 'blur(4px)', pointerEvents: 'none', padding: 16, background: '#0D0D0F', display: 'flex', flexDirection: 'column', gap: 12 },
+  blurredStop: { display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderBottom: '1px solid #1F1F23' },
+  blurredBadge: { width: 32, height: 32, borderRadius: 10, background: '#1F1F23', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#6B7280', flexShrink: 0 },
+  blurredName: { fontSize: 15, fontWeight: 700, color: '#F9FAFB' },
+  blurredType: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  paywallOverlay: { position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(9,9,11,0.3) 0%, rgba(9,9,11,0.97) 40%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: 28, textAlign: 'center' },
+  paywallLock: { fontSize: 36, marginBottom: 12 },
+  paywallTitle: { fontSize: 20, fontWeight: 900, margin: '0 0 8px', color: '#F9FAFB' },
+  paywallSub: { fontSize: 14, color: '#9CA3AF', lineHeight: 1.6, margin: '0 0 20px' },
+  paywallBtn: { width: '100%', padding: '16px 24px', background: 'linear-gradient(135deg, #7C3AED, #FF4D6D)', border: 'none', borderRadius: 14, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 24px rgba(124,58,237,0.4)' },
   tipsCard: { background: '#111113', border: '1px solid #1F1F23', borderRadius: 16, padding: 20 },
   tipsTitle: { fontSize: 16, fontWeight: 800, margin: '0 0 14px', color: '#F9FAFB' },
   tipItem: { display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start' },
