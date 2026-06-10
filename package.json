@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@stripe/stripe-js": "^9.8.0",
+    "groq-sdk": "^1.2.1",
+    "micro": "^10.0.1",
+    "next": "^16.2.7",
+    "node-fetch": "^3.3.2",
+    "openai": "^6.42.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "stripe": "^22.2.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.2",
+    "@types/react": "19.2.17",
+    "typescript": "6.0.3"
+  }
+}
